@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TypeWriterView">
+        <attr name="typingDelay" format="integer"/>
+        <attr name="startingText" format="string"/>
+    </declare-styleable>
+</resources>
