@@ -1,11 +1,9 @@
 package com.roomroster.typewriter_sample
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.CoroutineScope
@@ -35,25 +33,25 @@ class MainActivityFragment : Fragment(), CoroutineScope {
     }
 
     private fun setupViews() {
-        btnTest.setOnClickListener {
-            Toast.makeText(requireContext(), "TEST ${Math.random()}", Toast.LENGTH_LONG).show()
-        }
-
-        typeWriter.typingDelay = 200
         typeWriter.setLifecycleOwner(this)
 
-        launch(coroutineContext) {
-            Log.e("MAIN", "START")
-            typeWriter.type("Hello darkness my old friend.")
-            Log.e("MAIN", "STOP")
+        btnDemo.setOnClickListener {
+            launch(coroutineContext) { typeWriter.type("Hello darkness my old friend.") }
         }
 
-//        Runnable {
-//            Log.e("MAIN", "CANCELLING")
-//            typeWriter?.cancel()
-//        }.let {
-//            Handler(Looper.getMainLooper()).postDelayed(it, 5000)
-//        }
+        btnErase.setOnClickListener {
+            launch(coroutineContext) { typeWriter.erase() }
+        }
+
+        btnEraseType.setOnClickListener {
+            launch(coroutineContext) { typeWriter.eraseAndType("Brian give me back my pound.") }
+        }
+
+        btnType.setOnClickListener {
+            if (txtDemo.text.isNotEmpty()) {
+                launch(coroutineContext) { typeWriter.eraseAndType(txtDemo.text.toString()) }
+            }
+        }
     }
 
     override fun onDestroy() {

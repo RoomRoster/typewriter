@@ -4,23 +4,19 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.util.Log
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.os.bundleOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class TypeWriterView : AppCompatTextView, LifecycleObserver, CoroutineScope {
+class TypeWriterView : AppCompatTextView, LifecycleObserver {
 
-    var typingDelay: Int = DEFAULT_TYPING_DELAY
+    private var attrs = Attrs()
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -30,14 +26,14 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver, CoroutineScope {
         attributeSetId: Int
     ) : super(context, attrs, attributeSetId) {
         with(context.obtainStyledAttributes(attrs, R.styleable.TypeWriterView)) {
-            typingDelay = getInt(R.styleable.TypeWriterView_typingDelay, DEFAULT_TYPING_DELAY)
+            Attrs(
+                getInt(R.styleable.TypeWriterView_typingDelay, DEFAULT_TYPING_DELAY).toLong(),
+                getInt(R.styleable.TypeWriterView_erasingDelay, DEFAULT_ERASE_DELAY).toLong()
+            )
         }
     }
 
-    private var job = Job()
-
-    override val coroutineContext = Dispatchers.Main + job
-
+    private var job: Job? = null
     private var isTyping: Boolean = false
     private var textToType: String = ""
 
@@ -45,15 +41,44 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver, CoroutineScope {
         owner.lifecycle.addObserver(this)
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun cancel() {
-        Log.e("TEST", "I AM STOPPING")
-        job.cancel()
+    fun setTypingDelay(delay: Long) {
+        attrs = attrs.copy(typingDelay = delay)
     }
 
-    suspend fun type(text: String): String = withContext(coroutineContext) { startTyping(text) }
+    fun setErasingDelay(delay: Long) {
+        attrs = attrs.copy(eraseDelay = delay)
+    }
 
-    fun start(text: String) = launch(coroutineContext) { startTyping(text) }
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
+    fun cancel() {
+        job?.cancel()
+        job = null
+    }
+
+    private fun clearAndCancel() {
+        isTyping = false
+        textToType = ""
+        cancel()
+    }
+
+    suspend fun type(text: String): String {
+        if (job != null) clearAndCancel()
+
+        job = Job()
+        return startTyping(text, job!!)
+    }
+
+    suspend fun erase() {
+        if (job != null) clearAndCancel()
+
+        job = Job()
+        return eraseText(job!!)
+    }
+
+    suspend fun eraseAndType(text: String): String {
+        erase()
+        return startTyping(text, job!!)
+    }
 
     override fun onSaveInstanceState(): Parcelable = bundleOf(
         BUNDLE_SUPER_STATE to super.onSaveInstanceState(),
@@ -69,7 +94,14 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver, CoroutineScope {
         }
     }
 
-    private suspend fun startTyping(text: String): String = withContext(coroutineContext) {
+    private suspend fun eraseText(job: Job) = withContext(job) {
+        while (text.isNotEmpty()) {
+            text = text.toString().dropLast(1)
+            delay(attrs.eraseDelay)
+        }
+    }
+
+    private suspend fun startTyping(text: String, job: Job): String = withContext(job) {
         textToType = if (text == textToType && getCurrentText().isNotEmpty()) {
             text.replace(getCurrentText(), "")
         } else {
@@ -80,7 +112,7 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver, CoroutineScope {
         // On start
         for (char in textToType) {
             append(char.toString())
-            delay(typingDelay.toLong())
+            delay(attrs.typingDelay)
         }
 
         // On finished
@@ -97,10 +129,16 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver, CoroutineScope {
 
     companion object {
 
-        const val DEFAULT_TYPING_DELAY = 150
+        const val DEFAULT_TYPING_DELAY = 120
+        const val DEFAULT_ERASE_DELAY = 30
 
         private const val BUNDLE_SUPER_STATE: String = "BUNDLE_SUPER_STATE"
         private const val BUNDLE_CURRENT_TEXT: String = "BUNDLE_CURRENT_TEXT"
         private const val BUNDLE_TOTAL_TEXT: String = "BUNDLE_TOTAL_TEXT"
     }
+
+    data class Attrs(
+        val typingDelay: Long = DEFAULT_TYPING_DELAY.toLong(),
+        val eraseDelay: Long = DEFAULT_ERASE_DELAY.toLong()
+    )
 }
