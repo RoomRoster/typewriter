@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import kotlinx.android.synthetic.main.fragment_main.*
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +35,45 @@ class MainActivityFragment : Fragment(), CoroutineScope {
 
     private fun setupViews() {
         typeWriter.setLifecycleOwner(this)
+        typeWriter.attrs.typingDelay.toInt().let { d ->
+            barTypingSpeed.progress = d
+            txtTypeDelay.text = d.toString()
+        }
+
+        typeWriter.attrs.eraseDelay.toInt().let { d ->
+            barErasingSpeed.progress = d
+            txtEraseDelay.text = d.toString()
+        }
+
+        barTypingSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    txtTypeDelay.text = progress.toString()
+                    typeWriter.setTypingDelay(progress.toLong())
+                }
+            }
+        })
+
+        barErasingSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    txtEraseDelay.text = progress.toString()
+                    typeWriter.setErasingDelay(progress.toLong())
+                }
+            }
+        })
 
         btnDemo.setOnClickListener {
             launch(coroutineContext) { typeWriter.type("Hello darkness my old friend.") }

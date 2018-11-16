@@ -16,7 +16,8 @@ import kotlinx.coroutines.withContext
 
 class TypeWriterView : AppCompatTextView, LifecycleObserver {
 
-    private var attrs = Attrs()
+    var attrs = Attrs()
+        private set
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
