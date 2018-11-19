@@ -4,5 +4,6 @@
         <attr name="typingDelay" format="integer"/>
         <attr name="erasingDelay" format="integer"/>
         <attr name="startingText" format="string"/>
+        <attr name="enableRandomDelay" format="boolean"/>
     </declare-styleable>
 </resources>

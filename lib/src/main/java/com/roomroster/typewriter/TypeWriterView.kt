@@ -10,32 +10,34 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.OnLifecycleEvent
+import com.roomroster.typewriter.util.randomPlusOrMinusBetween
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-class TypeWriterView : AppCompatTextView, LifecycleObserver {
+class TypeWriterView constructor(
+    context: Context,
+    attrs: AttributeSet?,
+    attributeSetId: Int
+) : AppCompatTextView(context, attrs, attributeSetId), LifecycleObserver {
 
-    var attrs = Attrs()
+    constructor(context: Context) : this(context, null)
+    constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
+
+    var options = Attrs()
         private set
 
-    constructor(context: Context) : super(context)
-    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
-    constructor(
-        context: Context,
-        attrs: AttributeSet?,
-        attributeSetId: Int
-    ) : super(context, attrs, attributeSetId) {
+    init {
         with(context.obtainStyledAttributes(attrs, R.styleable.TypeWriterView)) {
             Attrs(
                 getInt(R.styleable.TypeWriterView_typingDelay, DEFAULT_TYPING_DELAY).toLong(),
-                getInt(R.styleable.TypeWriterView_erasingDelay, DEFAULT_ERASE_DELAY).toLong()
+                getInt(R.styleable.TypeWriterView_erasingDelay, DEFAULT_ERASE_DELAY).toLong(),
+                getBoolean(R.styleable.TypeWriterView_enableRandomDelay, false)
             )
-        }
+        }.let { options = it }
     }
 
     private var job: Job? = null
-    private var isTyping: Boolean = false
     private var textToType: String = ""
 
     fun setLifecycleOwner(owner: LifecycleOwner) {
@@ -43,11 +45,11 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver {
     }
 
     fun setTypingDelay(delay: Long) {
-        attrs = attrs.copy(typingDelay = delay)
+        options = options.copy(typingDelay = delay)
     }
 
     fun setErasingDelay(delay: Long) {
-        attrs = attrs.copy(eraseDelay = delay)
+        options = options.copy(eraseDelay = delay)
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
@@ -57,7 +59,6 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver {
     }
 
     private fun clearAndCancel() {
-        isTyping = false
         textToType = ""
         cancel()
     }
@@ -98,7 +99,7 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver {
     private suspend fun eraseText(job: Job) = withContext(job) {
         while (text.isNotEmpty()) {
             text = text.toString().dropLast(1)
-            delay(attrs.eraseDelay)
+            delay(getDelay(Action.ERASE))
         }
     }
 
@@ -110,16 +111,12 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver {
             text
         }
 
-        // On start
         for (char in textToType) {
             append(char.toString())
-            delay(attrs.typingDelay)
+            delay(getDelay(Action.TYPE))
         }
 
-        // On finished
-        val result = this@TypeWriterView.text.toString()
-        isTyping = false
-        return@withContext result
+        return@withContext this@TypeWriterView.text.toString()
     }
 
     private fun clearText() {
@@ -128,10 +125,25 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver {
 
     private fun getCurrentText() = this.text.toString()
 
+    private fun getDelay(action: Action): Long {
+        val startingDelay = when (action) {
+            Action.ERASE -> options.eraseDelay
+            Action.TYPE -> options.typingDelay
+        }
+
+        return if (!options.enableRandomDelay) startingDelay else
+            startingDelay + randomPlusOrMinusBetween(100).toLong()
+    }
+
     companion object {
 
         const val DEFAULT_TYPING_DELAY = 120
         const val DEFAULT_ERASE_DELAY = 30
+
+        enum class Action {
+            ERASE,
+            TYPE
+        }
 
         private const val BUNDLE_SUPER_STATE: String = "BUNDLE_SUPER_STATE"
         private const val BUNDLE_CURRENT_TEXT: String = "BUNDLE_CURRENT_TEXT"
@@ -140,6 +152,7 @@ class TypeWriterView : AppCompatTextView, LifecycleObserver {
 
     data class Attrs(
         val typingDelay: Long = DEFAULT_TYPING_DELAY.toLong(),
-        val eraseDelay: Long = DEFAULT_ERASE_DELAY.toLong()
+        val eraseDelay: Long = DEFAULT_ERASE_DELAY.toLong(),
+        val enableRandomDelay: Boolean = false
     )
 }

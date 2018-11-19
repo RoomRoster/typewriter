@@ -35,12 +35,12 @@ class MainActivityFragment : Fragment(), CoroutineScope {
 
     private fun setupViews() {
         typeWriter.setLifecycleOwner(this)
-        typeWriter.attrs.typingDelay.toInt().let { d ->
+        typeWriter.options.typingDelay.toInt().let { d ->
             barTypingSpeed.progress = d
             txtTypeDelay.text = d.toString()
         }
 
-        typeWriter.attrs.eraseDelay.toInt().let { d ->
+        typeWriter.options.eraseDelay.toInt().let { d ->
             barErasingSpeed.progress = d
             txtEraseDelay.text = d.toString()
         }
