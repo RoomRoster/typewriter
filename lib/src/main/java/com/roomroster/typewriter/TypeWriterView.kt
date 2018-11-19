@@ -1,6 +1,7 @@
 package com.roomroster.typewriter
 
 import android.content.Context
+import android.content.res.TypedArray
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
@@ -28,13 +29,18 @@ class TypeWriterView constructor(
         private set
 
     init {
-        with(context.obtainStyledAttributes(attrs, R.styleable.TypeWriterView)) {
-            Attrs(
-                getInt(R.styleable.TypeWriterView_typingDelay, DEFAULT_TYPING_DELAY).toLong(),
-                getInt(R.styleable.TypeWriterView_erasingDelay, DEFAULT_ERASE_DELAY).toLong(),
-                getBoolean(R.styleable.TypeWriterView_enableRandomDelay, false)
+        options = genOptions(context.obtainStyledAttributes(attrs, R.styleable.TypeWriterView))
+    }
+
+    private fun genOptions(typedArray: TypedArray) = with(typedArray) {
+        Attrs(
+            getInt(R.styleable.TypeWriterView_typingDelay, DEFAULT_TYPING_DELAY).toLong(),
+            getInt(R.styleable.TypeWriterView_erasingDelay, DEFAULT_ERASE_DELAY).toLong(),
+            getInt(R.styleable.TypeWriterView_randomWobbleBase, DEFAULT_RANDOM_WOBBLE),
+            getBoolean(
+                R.styleable.TypeWriterView_enableRandomWobble, DEFAULT_ENABLE_RANDOM_WOBBLE
             )
-        }.let { options = it }
+        )
     }
 
     private var job: Job? = null
@@ -131,14 +137,16 @@ class TypeWriterView constructor(
             Action.TYPE -> options.typingDelay
         }
 
-        return if (!options.enableRandomDelay) startingDelay else
-            startingDelay + randomPlusOrMinusBetween(100).toLong()
+        return if (!options.enableRandomWobble) startingDelay else
+            startingDelay + randomPlusOrMinusBetween(options.randomWobble).toLong()
     }
 
     companion object {
 
         const val DEFAULT_TYPING_DELAY = 120
         const val DEFAULT_ERASE_DELAY = 30
+        private const val DEFAULT_RANDOM_WOBBLE = 100
+        private const val DEFAULT_ENABLE_RANDOM_WOBBLE = false
 
         enum class Action {
             ERASE,
@@ -153,6 +161,7 @@ class TypeWriterView constructor(
     data class Attrs(
         val typingDelay: Long = DEFAULT_TYPING_DELAY.toLong(),
         val eraseDelay: Long = DEFAULT_ERASE_DELAY.toLong(),
-        val enableRandomDelay: Boolean = false
+        val randomWobble: Int = DEFAULT_RANDOM_WOBBLE,
+        val enableRandomWobble: Boolean = DEFAULT_ENABLE_RANDOM_WOBBLE
     )
 }
